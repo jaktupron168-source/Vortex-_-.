@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vortex Hub - Lua Script Editor</title>
+    <style>
+        /* ตั้งค่าพื้นฐาน */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* กรอบหลัก */
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: #161b22;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.15);
+            border: 1px solid #30363d;
+        }
+
+        /* ส่วนหัว */
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #00FF88;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.7), 0 0 20px rgba(0, 255, 136, 0.5);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #8b949e;
+            font-size: 1.1rem;
+        }
+
+        /* กล่องสำหรับเขียนโค้ด */
+        .editor-wrapper {
+            display: flex;
+            background-color: #010409;
+            border: 2px solid #00FF88;
+            border-radius: 8px;
+            height: 450px;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        /* ตัวเลขบรรทัด */
+        .line-numbers {
+            width: 50px;
+            background-color: #161b22;
+            color: #484f58;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 16px;
+            line-height: 1.5;
+            padding: 15px 10px 15px 5px;
+            text-align: right;
+            border-right: 1px solid #30363d;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        /* ช่องพิมพ์โค้ด */
+        .code-input {
+            flex-grow: 1;
+            background-color: transparent;
+            color: #00FF88;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 16px;
+            line-height: 1.5;
+            padding: 15px;
+            border: none;
+            outline: none;
+            resize: none;
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
+        }
+
+        .code-input::selection {
+            background: rgba(0, 255, 136, 0.3);
+            color: #fff;
+        }
+
+        /* แถบด้านล่าง (ปุ่ม + กล่องสถิติ) */
+        .action-bar {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* ปุ่มคัดลอก */
+        .btn-copy {
+            background-color: transparent;
+            color: #00FF88;
+            border: 2px solid #00FF88;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .btn-copy:hover {
+            background-color: #00FF88;
+            color: #0d1117;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .btn-copy:active {
+            transform: translateY(0);
+        }
+
+        /* กล่องสถิติ (จำนวนตัวอักษร / จำนวนบรรทัด) */
+        .stats-group {
+            display: flex;
+            gap: 15px;
+            flex: 2;
+            justify-content: flex-end;
+            min-width: 280px;
+        }
+
+        .stat-box {
+            background-color: #010409;
+            border: 1px solid #00FF88;
+            border-radius: 6px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #00FF88;
+            font-size: 0.95rem;
+            box-shadow: 0 0 5px rgba(0, 255, 136, 0.1);
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #ffffff;
+            font-family: 'Consolas', monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="title">Vortex Hub</h1>
+            <div class="subtitle">ระบบเขียนสคริปต์สุดเท่ (Lua)</div>
+        </div>
+
+        <div class="editor-wrapper">
+            <div class="line-numbers" id="line-numbers">1</div>
+            <textarea class="code-input" id="code-input" spellcheck="false" placeholder="-- เขียนสคริปต์ Lua ของคุณที่นี่..."></textarea>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn-copy" id="btn-copy" onclick="copyCode()">คัดลอกโค้ด</button>
+            
+            <div class="stats-group">
+                <div class="stat-box">
+                    <span>จำนวนตัวอักษร :</span>
+                    <span class="stat-value" id="char-count">0</span>
+                </div>
+                <div class="stat-box">
+                    <span>จำนวนบรรทัด :</span>
+                    <span class="stat-value" id="line-count">1</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const codeInput = document.getElementById('code-input');
+        const lineNumbers = document.getElementById('line-numbers');
+        const charCount = document.getElementById('char-count');
+        const lineCount = document.getElementById('line-count');
+
+        // ฟังก์ชันอัปเดตตัวเลขบรรทัดและนับสถิติ
+        function updateEditorStats() {
+            const text = codeInput.value;
+            const lines = text.split('\n').length;
+            
+            // 1. อัปเดตตัวเลขบรรทัดด้านซ้าย
+            let numbersArray = [];
+            for (let i = 1; i <= lines; i++) {
+                numbersArray.push(i);
+            }
+            lineNumbers.innerHTML = numbersArray.join('<br>');
+
+            // 2. อัปเดตสถิติจำนวนตัวอักษร และ บรรทัด
+            charCount.textContent = text.length;
+            lineCount.textContent = lines;
+        }
+
+        // ซิงค์การเลื่อน Scroll
+        codeInput.addEventListener('scroll', () => {
+            lineNumbers.scrollTop = codeInput.scrollTop;
+        });
+
+        // ตรวจจับการพิมพ์
+        codeInput.addEventListener('input', updateEditorStats);
+
+        // รองรับการกดปุ่ม Tab
+        codeInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+
+                this.value = this.value.substring(0, start) + "    " + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 4;
+                
+                updateEditorStats();
+            }
+        });
+
+        // ฟังก์ชันคัดลอกโค้ดแบบการันตีทำงานได้ทุกสถานการณ์
+        function copyCode() {
+            const code = codeInput.value;
+            if (code.trim() === '') {
+                alert('ยังไม่มีโค้ดให้คัดลอกครับ!');
+                return;
+            }
+
+            // ฟังก์ชันคัดลอกสำรอง (สำหรับไฟล์ท้องถิ่น file://)
+            function fallbackCopyTextToClipboard(text) {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.top = "0";
+                textArea.style.left = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        showCopySuccess();
+                    } else {
+                        alert('ไม่สามารถคัดลอกได้ กรุณากด Ctrl+C เพื่อคัดลอกด้วยตัวเอง');
+                    }
+                } catch (err) {
+                    alert('เกิดข้อผิดพลาดในการคัดลอก');
+                }
+                document.body.removeChild(textArea);
+            }
+
+            // ลองใช้ Clipboard API ก่อน ถ้าไม่ได้ผลให้ใช้ fallback
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(code).then(() => {
+                    showCopySuccess();
+                }).catch(() => {
+                    fallbackCopyTextToClipboard(code);
+                });
+            } else {
+                fallbackCopyTextToClipboard(code);
+            }
+        }
+
+        // แสดงผลเมื่อคัดลอกสำเร็จ
+        function showCopySuccess() {
+            const btn = document.getElementById('btn-copy');
+            const originalText = btn.innerText;
+            
+            btn.innerText = "คัดลอกสำเร็จแล้ว!";
+            btn.style.backgroundColor = "#00FF88";
+            btn.style.color = "#0d1117";
+
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.backgroundColor = "transparent";
+                btn.style.color = "#00FF88";
+            }, 2000);
+        }
+
+        // เริ่มต้นคำนวณสถิติตอนเปิดหน้าเว็บ
+        updateEditorStats();
+    </script>
+</body>
+</html>
